@@ -1,122 +1,171 @@
 package com.example.flashcard3
 
-import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.snackbar.Snackbar
+import kotlin.math.max
 
 class MainActivity : AppCompatActivity() {
-    @SuppressLint("MissingInflatedId")
-    lateinit var flashcardDatabase: FlashcardDatabase
-    var allFlashcards = mutableListOf<Flashcard>()
+    var currentCardDisplayedIndex = 0
+    private lateinit var flashcardDatabase: FlashcardDatabase
+    private var allFlashcards = mutableListOf<Flashcard>()
 
-    @SuppressLint("CutPasteId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        val isShowingAnswers = findViewById<ImageView>(R.id.image_plus_cercle)
-        val flashcard_question = findViewById<TextView>(R.id.flashcard_question)
-        val flashcard_answer = findViewById<TextView>(R.id.flashcard_answer)
 
-
+        val flashcardQuestion = findViewById<TextView>(R.id.flashcard_question)
+        val flashcardAnswer = this.findViewById<TextView>(R.id.flashcard_answer)
+        val flashcardAnswer1 = findViewById<TextView>(R.id.flashcard_answer1)
+        val flashcardAnswer2 = findViewById<TextView>(R.id.flashcard_answer2)
 
         flashcardDatabase = FlashcardDatabase(this)
+        flashcardDatabase.initFirstCard()
         allFlashcards = flashcardDatabase.getAllCards().toMutableList()
 
+        if(allFlashcards.size > 0){
 
-        if (allFlashcards.size > 0) {
-            findViewById<TextView>(R.id.flashcard_question).text = allFlashcards[0].question
-            findViewById<TextView>(R.id.flashcard_answer).text = allFlashcards[0].answer
+            flashcardQuestion.text = allFlashcards[0].question
+            flashcardAnswer.text = allFlashcards[0].answer
+            flashcardAnswer1.text = allFlashcards[0].wrongAnswer1
+            flashcardAnswer2.text = allFlashcards[0].wrongAnswer2
+
         }
 
-        flashcardDatabase.initFirstCard()
-
-        flashcard_question.setOnClickListener {
-            flashcard_question.visibility = View.INVISIBLE
-            flashcard_answer.visibility = View.VISIBLE
-        }
-        flashcard_answer.setOnClickListener {
-            flashcard_question.visibility = View.VISIBLE
-            flashcard_answer.visibility = View.INVISIBLE
-        }
-
-        isShowingAnswers.setOnClickListener {
-            val intent = Intent(this, AddCardActivity::class.java)
-            startActivity(intent)
-        }
+        val crossMain = findViewById<View>(R.id.imageButton3)
+        val editbtn   = findViewById<View>(R.id.imageButton)
+        val deletebtn   = findViewById<View>(R.id.imageButton4)
+        val nextBtn    = findViewById<View>(R.id.imageButton1)
 
 
-        var currentCardDisplayedIndex = 0
+        nextBtn.setOnClickListener {
+            currentCardDisplayedIndex = getRandomNumber(0,allFlashcards.size-1)
 
-        findViewById<View>(R.id.next_button).setOnClickListener {
-            // don't try to go to next card if you have no cards to begin with
-            if (allFlashcards.size == 0) {
-                // return here, so that the rest of the code in this onClickListener doesn't execute
+            if (allFlashcards.isEmpty()) {
                 return@setOnClickListener
             }
 
-            // advance our pointer index so we can show the next card
             currentCardDisplayedIndex++
 
-            // make sure we don't get an IndexOutOfBoundsError if we are viewing the last indexed card in our list
-            if(currentCardDisplayedIndex >= allFlashcards.size) {
-                Snackbar.make(
-                    findViewById<TextView>(R.id.flashcard_question), // This should be the TextView for displaying your flashcard question
-                    "You've reached the end of the cards, going back to start.",
-                    Snackbar.LENGTH_SHORT)
-                    .show()
+            if (currentCardDisplayedIndex >= allFlashcards.size) {
+
                 currentCardDisplayedIndex = 0
+                Snackbar.make(findViewById(R.id.imageButton4), "No more cards!!", Snackbar.LENGTH_SHORT).show()
+
             }
 
-            // set the question and answer TextViews with data from the database
-            allFlashcards = flashcardDatabase.getAllCards().toMutableList()
-            val (question, answer) = allFlashcards[currentCardDisplayedIndex]
+            val (question, answer,wrongAnswer1,wrongAnswer2) = allFlashcards[currentCardDisplayedIndex]
 
-            findViewById<TextView>(R.id.flashcard_answer).text = answer
-            findViewById<TextView>(R.id.flashcard_question).text = question
+            flashcardQuestion.text = question
+            flashcardAnswer.text = answer
+            flashcardAnswer1.text = wrongAnswer1
+            flashcardAnswer2.text = wrongAnswer2
+        }
+
+
+        deletebtn.setOnClickListener {
+            val currentQuestion = flashcardQuestion.text.toString()
+            flashcardDatabase.deleteCard(currentQuestion)
+
+            allFlashcards = flashcardDatabase.getAllCards().toMutableList()
+
+            // Vérifier s'il reste des cartes
+            if (allFlashcards.isNotEmpty()) {
+                // Afficher la carte précédente (si disponible)
+                currentCardDisplayedIndex = max(0, currentCardDisplayedIndex - 1)
+                val (question, answer,wrongAnswer1,wrongAnswer2) = allFlashcards[currentCardDisplayedIndex]
+                flashcardQuestion.text = question
+                flashcardAnswer.text = answer
+                flashcardAnswer1.text = wrongAnswer1
+                flashcardAnswer2.text = wrongAnswer2
+
+            } else {
+                // S'il n'y a plus de cartes, afficher un état vide
+                flashcardQuestion.text = ""
+                flashcardAnswer.text = ""
+                flashcardAnswer1.text = ""
+                flashcardAnswer2.text = ""
+
+            }
+        }
+
+
+        flashcardAnswer.setOnClickListener {
+            flashcardQuestion.visibility = View.VISIBLE
+            findViewById<View>(R.id.flashcard_answer).setBackgroundColor(getResources().getColor(R.color.my_green, null))
+        }
+
+        // Click listener for the second answer option
+        flashcardAnswer1.setOnClickListener {
+            findViewById<View>(R.id.flashcard_answer1).setBackgroundColor(getResources().getColor(R.color.my_red_color, null))
+            findViewById<View>(R.id.flashcard_answer).setBackgroundColor(getResources().getColor(R.color.my_green, null))
+        }
+
+
+        // Click listener for the third answer option
+        flashcardAnswer2.setOnClickListener {
+            findViewById<View>(R.id.flashcard_answer).setBackgroundColor(getResources().getColor(R.color.my_green, null))
+            findViewById<View>(R.id.flashcard_answer2).setBackgroundColor(getResources().getColor(R.color.my_red_color, null))
         }
 
         val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val data: Intent? = result.data
-            val extras = data?.extras
 
-            if (extras != null) { // Check that we have data returned
-                val question = extras.getString("question")
-                val answer = extras.getString("answer")
+            if (result.resultCode == Activity.RESULT_OK && data != null) {
+                val question = data.getStringExtra("question")
+                val answer = data.getStringExtra("answer")
+                val wrongAnswer1 = data.getStringExtra("wrongAnswer1")
+                val wrongAnswer2 = data.getStringExtra("wrongAnswer2")
 
-                // Log the value of the strings for easier debugging
-                Log.i("MainActivity", "question: $question")
-                Log.i("MainActivity", "answer: $answer")
+                // Mettre à jour les TextView dans MainActivity avec les nouvelles données
 
-                // Display newly created flashcard
-                findViewById<TextView>(R.id.flashcard_question).text = question
-                findViewById<TextView>(R.id.flashcard_answer).text = answer
-
-                // Save newly created flashcard to database
                 if (question != null && answer != null) {
-                    flashcardDatabase.insertCard(Flashcard(question, answer))
+                    flashcardDatabase.insertCard(Flashcard(question,answer,wrongAnswer1,wrongAnswer2))
+
+                    flashcardQuestion.text = question
+                    flashcardAnswer.text = answer
+                    flashcardAnswer1.text = wrongAnswer1
+                    flashcardAnswer2.text = wrongAnswer2
                     // Update set of flashcards to include new card
-                    allFlashcards = flashcardDatabase.getAllCards().toMutableList()
+                    //allFlashcards = flashcardDatabase.getAllCards().toMutableList()
                 } else {
                     Log.e("TAG", "Missing question or answer to input into database. Question is $question and answer is $answer")
                 }
+
             } else {
-                Log.i("MainActivity", "Returned null data from AddCardActivity")
+                Log.i("AddCardActivity", "Save operation cancelled or no data returned")
             }
         }
+        editbtn.setOnClickListener {
+            val question = this.findViewById<TextView>(R.id.flashcard_question).text.toString()
+            val answer = findViewById<TextView>(R.id.flashcard_answer).text.toString()
+            val wrongAnswer1 = this.findViewById<TextView>(R.id.flashcard_answer1).text.toString()
+            val wrongAnswer2 = this.findViewById<TextView>(R.id.flashcard_answer2).text.toString()
 
-// Lancer MainActivity en attente d'un résultat
-        isShowingAnswers.setOnClickListener {
+            val intent = Intent(this, AddCardActivity::class.java)
+            intent.putExtra("question", question)
+            intent.putExtra("answer", answer)
+            intent.putExtra("wrongAnswer1", wrongAnswer1)
+            intent.putExtra("wrongAnswer2", wrongAnswer2)
+            resultLauncher.launch(intent)
+        }
+
+        crossMain.setOnClickListener {
             val intent = Intent(this, AddCardActivity::class.java)
             resultLauncher.launch(intent)
         }
 
+    }
+    private fun getRandomNumber(minNumber: Int, maxNumber: Int): Int {
+        return (minNumber..maxNumber).random()
     }
 
 }

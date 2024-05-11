@@ -10,7 +10,7 @@ class FlashcardDatabase internal constructor(context: Context) {
 
     fun initFirstCard() {
         if (db.flashcardDao().getAll().isEmpty()) {
-            insertCard(Flashcard("Who is the 44th President of the United States", "Barack Obama"))
+            insertCard(Flashcard("", ""))
         }
     }
 
